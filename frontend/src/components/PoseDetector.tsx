@@ -1,7 +1,8 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Pose, POSE_CONNECTIONS } from '@mediapipe/pose';
+import { Pose } from '@mediapipe/pose';
 import { Camera } from '@mediapipe/camera_utils';
 import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils';
+import { POSE_CONNECTIONS_PRUNED, prunePose } from '../utils/utils';
 
 interface PoseDetectorProps {
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -10,7 +11,7 @@ interface PoseDetectorProps {
   onPoseDetected?: (landmarks: any[]) => void;
 }
 
-interface PoseLandmark {
+export interface PoseLandmark {
   x: number;
   y: number;
   z: number;
@@ -44,29 +45,33 @@ const PoseDetector: React.FC<PoseDetectorProps> = ({
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw the video frame
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
     if (results.poseLandmarks) {
-      // Draw pose connections
-      drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, {
+      results.poseLandmarks = prunePose(results.poseLandmarks);
+      // Flip pose landmarks horizontally to match flipped video
+      const flippedLandmarks = results.poseLandmarks.map((landmark: PoseLandmark) => ({
+        ...landmark,
+        x: 1 - landmark.x // Flip x-coordinate (MediaPipe uses normalized coordinates 0-1)
+      }));
+
+      // Draw pose connections with flipped coordinates
+      drawConnectors(ctx, flippedLandmarks, POSE_CONNECTIONS_PRUNED, {
         color: '#00FF00',
         lineWidth: 4
       });
 
-      // Draw pose landmarks
-      drawLandmarks(ctx, results.poseLandmarks, {
+      // Draw pose landmarks with flipped coordinates
+      drawLandmarks(ctx, flippedLandmarks, {
         color: '#FF0000',
         lineWidth: 2,
         radius: 6
       });
 
-      // Update current pose state
-      setCurrentPose(results.poseLandmarks);
+      // Update current pose state with flipped landmarks
+      setCurrentPose(flippedLandmarks);
       
-      // Call callback with pose data
+      // Call callback with flipped pose data
       if (onPoseDetected) {
-        onPoseDetected(results.poseLandmarks);
+        onPoseDetected(flippedLandmarks);
       }
     }
   }, [canvasRef, videoRef, onPoseDetected]);
