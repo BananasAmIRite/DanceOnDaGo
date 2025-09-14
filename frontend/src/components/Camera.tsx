@@ -64,9 +64,6 @@ const Camera: React.FC<CameraProps> = ({ onNavigateToGame }) => {
 
   const takePicture = useCallback(async () => {
     if (videoRef.current && canvasRef.current && isStreaming) {
-      // Stop the camera first
-      stopCamera();
-      
       // Start loading state
       setIsLoading(true);
       setLoadingMessage('Capturing image...');
@@ -80,11 +77,13 @@ const Camera: React.FC<CameraProps> = ({ onNavigateToGame }) => {
       if (context) {
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
-        context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+        context.drawImage(video, 0, 0, video.videoHeight, video.videoWidth);
         
         const imageDataUrl = canvas.toDataURL('image/png');
         console.log(imageDataUrl); 
         setCapturedImage(imageDataUrl);
+        // Stop the camera first
+        stopCamera();
 
         // Send image to server
         try {
