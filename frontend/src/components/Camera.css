@@ -77,10 +77,20 @@
   background-color: #1e7e34;
 }
 
+.btn-info {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.btn-info:hover {
+  background-color: #117a8b;
+}
+
 .camera-preview {
   margin-bottom: 30px;
   display: flex;
   justify-content: center;
+  position: relative;
 }
 
 .video-preview {
@@ -122,6 +132,30 @@
   gap: 15px;
   justify-content: center;
   flex-wrap: wrap;
+}
+
+.pose-overlay {
+  border-radius: 12px;
+}
+
+.pose-data {
+  margin: 20px 0;
+  padding: 15px;
+  background-color: #e8f4fd;
+  border-radius: 8px;
+  border-left: 4px solid #17a2b8;
+}
+
+.pose-data h3 {
+  color: #117a8b;
+  margin: 0 0 10px 0;
+  font-size: 18px;
+}
+
+.pose-data p {
+  color: #0c5460;
+  margin: 0;
+  font-weight: 500;
 }
 
 @media (max-width: 768px) {

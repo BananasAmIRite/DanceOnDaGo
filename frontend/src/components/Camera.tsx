@@ -1,4 +1,5 @@
 import React, { useRef, useState, useCallback } from 'react';
+import PoseDetector from './PoseDetector';
 import './Camera.css';
 
 interface CameraProps {}
@@ -6,10 +7,13 @@ interface CameraProps {}
 const Camera: React.FC<CameraProps> = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [poseData, setPoseData] = useState<any>(null);
+  const [showPoseOverlay, setShowPoseOverlay] = useState(true);
 
   const startCamera = useCallback(async () => {
     try {
@@ -68,6 +72,14 @@ const Camera: React.FC<CameraProps> = () => {
     setCapturedImage(null);
   }, []);
 
+  const handlePoseDetected = useCallback((landmarks: any[]) => {
+    setPoseData(landmarks);
+  }, []);
+
+  const togglePoseOverlay = useCallback(() => {
+    setShowPoseOverlay(!showPoseOverlay);
+  }, [showPoseOverlay]);
+
   return (
     <div className="camera-container">
       <h2>Camera App</h2>
@@ -90,9 +102,14 @@ const Camera: React.FC<CameraProps> = () => {
         )}
         
         {isStreaming && (
-          <button onClick={takePicture} className="btn btn-success">
-            Take Picture
-          </button>
+          <>
+            <button onClick={takePicture} className="btn btn-success">
+              Take Picture
+            </button>
+            <button onClick={togglePoseOverlay} className="btn btn-info">
+              {showPoseOverlay ? 'Hide Pose' : 'Show Pose'}
+            </button>
+          </>
         )}
       </div>
 
@@ -105,7 +122,37 @@ const Camera: React.FC<CameraProps> = () => {
           className={`video-preview ${!isStreaming ? 'hidden' : ''}`}
         />
         <canvas ref={canvasRef} className="hidden" />
+        {showPoseOverlay && (
+          <canvas 
+            ref={overlayCanvasRef} 
+            className="pose-overlay"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              pointerEvents: 'none'
+            }}
+          />
+        )}
       </div>
+
+      {/* Pose Detection Component */}
+      <PoseDetector
+        videoRef={videoRef as React.RefObject<HTMLVideoElement>}
+        canvasRef={(showPoseOverlay ? overlayCanvasRef : canvasRef) as React.RefObject<HTMLCanvasElement>}
+        isStreaming={isStreaming}
+        onPoseDetected={handlePoseDetected}
+      />
+
+      {/* Pose Data Display */}
+      {poseData && (
+        <div className="pose-data">
+          <h3>Pose Detected</h3>
+          <p>Tracking {poseData.length} landmarks</p>
+        </div>
+      )}
 
       {capturedImage && (
         <div className="captured-image-section">
