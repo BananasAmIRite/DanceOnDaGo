@@ -5,7 +5,7 @@ import dotenv from "dotenv";
 import { analyzeEmotions } from './claude';
 import { generateMusic } from './suno';
 import { downloadMp3 } from './utils/downloadMp3';
-import { close } from 'fs';
+import { close, writeFileSync } from 'fs';
 import { spawn } from 'child_process';
 import normalizeSet, { normalizeSingle } from './utils/norm';
 
@@ -38,86 +38,6 @@ app.post("/upload-video-base64", async (req, res) => {
     console.log(musicUrl);
 
     const musicFile = await downloadMp3(musicUrl, {outputDir: "./downloads", filename: "music.mp3"});
-
-
-    // const correctLandmarks = [
-    //     {
-    //         "x": 0.5423151850700378,
-    //         "y": 0.5083906650543213,
-    //         "z": 0.2010207623243332,
-    //         "visibility": 0.9975668787956238
-    //     },
-    //     {
-    //         "x": 0.3094378113746643,
-    //         "y": 0.4582330882549286,
-    //         "z": -0.461479127407074,
-    //         "visibility": 0.9998565912246704
-    //     },
-    //     {
-    //         "x": 0.68757164478302,
-    //         "y": 0.4013097584247589,
-    //         "z": 0.6193047761917114,
-    //         "visibility": 0.9416890144348145
-    //     },
-    //     {
-    //         "x": 0.22485633194446564,
-    //         "y": 0.8265430331230164,
-    //         "z": -0.6321607232093811,
-    //         "visibility": 0.9774661660194397
-    //     },
-    //     {
-    //         "x": 0.6729303598403931,
-    //         "y": 0.15440741181373596,
-    //         "z": 1.0620172023773193,
-    //         "visibility": 0.9869805574417114
-    //     },
-    //     {
-    //         "x": 0.3010285496711731,
-    //         "y": 1.0632961988449097,
-    //         "z": -0.719206690788269,
-    //         "visibility": 0.9220154285430908
-    //     },
-    //     {
-    //         "x": 0.44793421030044556,
-    //         "y": 1.0992045402526855,
-    //         "z": 0.17829068005084991,
-    //         "visibility": 0.6339947581291199
-    //     },
-    //     {
-    //         "x": 0.2655290961265564,
-    //         "y": 1.129392147064209,
-    //         "z": -0.17599758505821228,
-    //         "visibility": 0.650085985660553
-    //     },
-    //     {
-    //         "x": 0.4417381286621094,
-    //         "y": 1.6524783372879028,
-    //         "z": 0.16952940821647644,
-    //         "visibility": 0.00881913211196661
-    //     },
-    //     {
-    //         "x": 0.2686839997768402,
-    //         "y": 1.6515926122665405,
-    //         "z": -0.2074006050825119,
-    //         "visibility": 0.015996672213077545
-    //     },
-    //     {
-    //         "x": 0.4106599688529968,
-    //         "y": 2.1275155544281006,
-    //         "z": 0.5434763431549072,
-    //         "visibility": 0.00048727981629781425
-    //     },
-    //     {
-    //         "x": 0.234624981880188,
-    //         "y": 2.126542806625366,
-    //         "z": 0.03254587575793266,
-    //         "visibility": 0.0013454663567245007
-    //     }
-    // ]; 
-    // const c = []; 
-    // for (let i = 0; i < 10000; i++) {
-    //     c.push(correctLandmarks); 
-    // }
 
     const analyzerProcess = spawn('python3', ['./nn/data_analyzer.py']);
 
@@ -165,6 +85,9 @@ app.post("/get_score", async (req, res) => {
     let totDist = 0;
     let n = 0; 
 
+    const userFrames = [];
+    const rightFrames = []; 
+
     for (let i = 0; i < poseHistory.length; i++) {
         // through each frame
         const poseEntry = poseHistory[i]; // { landmarks: PoseLandmark[], timestamp: number }
@@ -181,6 +104,18 @@ app.post("/get_score", async (req, res) => {
 
         const correctPose = normalizeSingle(correctLandmarks[closestElapsedFrame]); // [[0, 1], [0, 1]]
 
+        const userFrame = []; 
+        const rightFrame = []; 
+        for (const p of pose) {
+            userFrame.push([p.x, p.y]); 
+        }
+        for (const c of correctPose) {
+            rightFrame.push([c.x, c.y]); 
+        }
+
+        userFrames.push(userFrame); 
+        rightFrames.push(rightFrame); 
+
         for (let j = 0; j < Math.min(pose.length, correctPose.length); j++) {
             const poseLandmark = pose[j];
             const correctPoseLandmark = correctPose[j];
@@ -192,11 +127,49 @@ app.post("/get_score", async (req, res) => {
         }
     }
 
-    const score = 100 - (totDist / n) * 100;
     
-    res.json({
-        message: "Score calculated successfully!",
-        score
+    const spatialScore = 100 - (totDist / n) * 100;
+    let timingScore = 0; 
+    let rhythmScore = 0; 
+    let feedback = ""; 
+
+    // Write data to temporary files instead of passing as arguments
+    writeFileSync("./temp_user_frames.json", JSON.stringify(userFrames)); 
+    writeFileSync("./temp_right_frames.json", JSON.stringify(rightFrames));
+
+    const analyzerProcess = spawn('python3', ['./nn/scoring/real_time_pose_scorer.py', './temp_user_frames.json', './temp_right_frames.json']);
+
+    let output = ""; 
+
+    analyzerProcess.stdout.on('data', (data) => {
+        console.log('data!');
+        console.log(data.toString()); 
+        output += data.toString();
+        
+        const lines = data.toString().split('\n');
+        for (const line of lines) {
+            if (line.includes("Timing:")) {
+                timingScore = parseFloat(line.split(":")[1].trim());
+            }
+            if (line.includes("Rhythm:")) {
+                rhythmScore = parseFloat(line.split(":")[1].trim());
+            }
+            if (line.includes("Feedback:")) {
+                feedback = line.split(":")[1].trim();
+            }
+        }
+    });
+
+    analyzerProcess.on('close', (code) => {
+        console.log(`Scorer process exited with code ${code}`);
+        writeFileSync("./output.json", output);
+        
+        // Send response after process completes
+        res.json({
+            message: "Score calculated successfully!",
+            score: (spatialScore*0.4 + timingScore*0.3 + rhythmScore*0.3),
+            feedback: feedback
+        });
     });
 });
 

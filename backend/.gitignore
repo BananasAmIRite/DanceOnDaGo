@@ -2,3 +2,6 @@ node_modules/
 .env
 downloads/
 nn/keypoints2d/
+output.json
+temp_right_frames.json
+temp_user_frames.json

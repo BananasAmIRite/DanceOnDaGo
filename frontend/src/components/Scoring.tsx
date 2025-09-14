@@ -17,11 +17,7 @@ interface ScoringProps {
 interface ScoreData {
   score: number;
   feedback: string;
-  breakdown: {
-    baseScore: number;
-    bonusPoints: number;
-    totalMoves: number;
-  };
+  message: string;
 }
 
 const Scoring: React.FC<ScoringProps> = ({ poseHistory, correctLandmarks, gameData, onBackToCamera }) => {
@@ -138,6 +134,12 @@ const Scoring: React.FC<ScoringProps> = ({ poseHistory, correctLandmarks, gameDa
           </div>
         </div>
 
+        <div className="feedback-section">
+          <div className="feedback-card">
+            <h3>Feedback</h3>
+            <p className="feedback-text">{scoreData.feedback || "Great job dancing!"}</p>
+          </div>
+        </div>
 
         <div className="scoring-actions">
           <button onClick={onBackToCamera} className="btn btn-primary">
