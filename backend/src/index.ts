@@ -36,7 +36,7 @@ app.post("/upload-video-base64", async (req, res) => {
 
     const musicFile = await downloadMp3(musicUrl, {outputDir: "./downloads", filename: "music.mp3"});
 
-    res.json({ message: "Video uploaded successfully!" });
+    res.json({ message: "Video uploaded successfully!", emotions: emotions, musicUrl: musicUrl });
 })
 
 const PORT = process.env.PORT || 3000;
