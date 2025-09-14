@@ -87,13 +87,13 @@ const Camera: React.FC<CameraProps> = ({ onNavigateToGame }) => {
 
         // Send image to server
         try {
-          setLoadingMessage('Analyzing emotions...');
+          setLoadingMessage('Analyzing Image...');
           const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3000';
           const response = await axios.post(`${backendUrl}/upload-video-base64`, {
             imageData: imageDataUrl
           });
           
-          setLoadingMessage('Generating music...');
+          setLoadingMessage('Generating Music...');
           console.log('Image sent to server:', response.data);
           
           // Simulate additional processing time for music generation
@@ -153,7 +153,7 @@ const Camera: React.FC<CameraProps> = ({ onNavigateToGame }) => {
 
   return (
     <div className="camera-container">
-      <h2>Camera App</h2>
+      <h2>Dance On The Go</h2>
       
       {error && (
         <div className="error-message">
@@ -197,20 +197,11 @@ const Camera: React.FC<CameraProps> = ({ onNavigateToGame }) => {
         )}
       </div>
 
-      {/* Pose Detection Component */}
-      {/* TODO: move pose detection into Game.tsx */}
-      {/* <PoseDetector
-        videoRef={videoRef as React.RefObject<HTMLVideoElement>}
-        canvasRef={(showPoseOverlay ? overlayCanvasRef : canvasRef) as React.RefObject<HTMLCanvasElement>}
-        isStreaming={isStreaming}
-        onPoseDetected={handlePoseDetected}
-      /> */}
-
       {isLoading ? (
         <div className="loading-screen">
           <div className="loading-spinner"></div>
           <h3>{loadingMessage}</h3>
-          <p>Please wait while we process your image...</p>
+          <p>Process your image...</p>
         </div>
       ) : null}
     </div>
