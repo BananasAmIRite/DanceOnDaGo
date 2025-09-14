@@ -1,10 +1,20 @@
-import React, { useRef, useState, useCallback } from 'react';
 import PoseDetector from './PoseDetector';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
+import axios from 'axios';
 import './Camera.css';
 
-interface CameraProps {}
+interface GameData {
+  capturedImage: string;
+  emotions?: any;
+  musicUrl?: string;
+  processingComplete: boolean;
+}
 
-const Camera: React.FC<CameraProps> = () => {
+interface CameraProps {
+  onNavigateToGame: (data: GameData) => void;
+}
+
+const Camera: React.FC<CameraProps> = ({ onNavigateToGame }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -12,8 +22,13 @@ const Camera: React.FC<CameraProps> = () => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
   const [poseData, setPoseData] = useState<any>(null);
   const [showPoseOverlay, setShowPoseOverlay] = useState(true);
+  
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState<string>('');
+  
 
   const startCamera = useCallback(async () => {
     try {
@@ -34,6 +49,11 @@ const Camera: React.FC<CameraProps> = () => {
     }
   }, []);
 
+  // Auto-start camera when component mounts
+  useEffect(() => {
+    startCamera();
+  }, [startCamera]);
+
   const stopCamera = useCallback(() => {
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
@@ -42,8 +62,17 @@ const Camera: React.FC<CameraProps> = () => {
     }
   }, [stream]);
 
-  const takePicture = useCallback(() => {
-    if (videoRef.current && canvasRef.current) {
+  const takePicture = useCallback(async () => {
+    if (videoRef.current && canvasRef.current && isStreaming) {
+      // Stop the camera first
+      stopCamera();
+      
+      // Start loading state
+      setIsLoading(true);
+      setLoadingMessage('Capturing image...');
+      setCapturedImage(null);
+      setError(null);
+
       const video = videoRef.current;
       const canvas = canvasRef.current;
       const context = canvas.getContext('2d');
@@ -54,10 +83,53 @@ const Camera: React.FC<CameraProps> = () => {
         context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
         
         const imageDataUrl = canvas.toDataURL('image/png');
+        console.log(imageDataUrl); 
         setCapturedImage(imageDataUrl);
+
+        // Send image to server
+        try {
+          setLoadingMessage('Analyzing emotions...');
+          const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3000';
+          const response = await axios.post(`${backendUrl}/upload-video-base64`, {
+            imageData: imageDataUrl
+          });
+          
+          setLoadingMessage('Generating music...');
+          console.log('Image sent to server:', response.data);
+          
+          // Simulate additional processing time for music generation
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          setLoadingMessage('Processing complete!');
+          
+          // Prepare game data and navigate to game page
+          const gameData: GameData = {
+            capturedImage: imageDataUrl,
+            emotions: response.data.emotions,
+            musicUrl: response.data.musicUrl,
+            processingComplete: true
+          };
+          
+          // Show completion message briefly before navigating
+          setTimeout(() => {
+            setIsLoading(false);
+            setLoadingMessage('');
+            onNavigateToGame(gameData);
+          }, 1500);
+          
+        } catch (error) {
+          console.error('Error sending image to server:', error);
+          setError('Failed to process image');
+          setIsLoading(false);
+          setLoadingMessage('');
+          // Restart camera even on error
+          setTimeout(() => {
+            startCamera();
+          }, 2000);
+        }
       }
     }
-  }, []);
+  }, [isStreaming, stopCamera, startCamera]);
 
   const downloadImage = useCallback(() => {
     if (capturedImage) {
@@ -166,7 +238,48 @@ const Camera: React.FC<CameraProps> = () => {
               Clear
             </button>
           </div>
+      {isLoading ? (
+        <div className="loading-screen">
+          <div className="loading-spinner"></div>
+          <h3>{loadingMessage}</h3>
+          <p>Please wait while we process your image...</p>
         </div>
+      ) : (
+        <>
+          <div className="camera-controls">
+            {isStreaming && (
+              <button onClick={takePicture} className="btn btn-success">
+                Take Picture
+              </button>
+            )}
+          </div>
+
+          <div className="camera-preview">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className={`video-preview ${!isStreaming ? 'hidden' : ''}`}
+            />
+            <canvas ref={canvasRef} className="hidden" />
+          </div>
+
+          {capturedImage && !isStreaming && (
+            <div className="captured-image-section">
+              <h3>Captured Photo</h3>
+              <img src={capturedImage} alt="Captured" className="captured-image" />
+              <div className="image-controls">
+                <button onClick={downloadImage} className="btn btn-primary">
+                  Download
+                </button>
+                <button onClick={clearImage} className="btn btn-secondary">
+                  Clear
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
