@@ -1,3 +1,4 @@
+import PoseDetector from './PoseDetector';
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import axios from 'axios';
 import './Camera.css';
@@ -16,12 +17,18 @@ interface CameraProps {
 const Camera: React.FC<CameraProps> = ({ onNavigateToGame }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  const [poseData, setPoseData] = useState<any>(null);
+  const [showPoseOverlay, setShowPoseOverlay] = useState(true);
+  
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState<string>('');
+  
 
   const startCamera = useCallback(async () => {
     try {
@@ -137,6 +144,14 @@ const Camera: React.FC<CameraProps> = ({ onNavigateToGame }) => {
     setCapturedImage(null);
   }, []);
 
+  const handlePoseDetected = useCallback((landmarks: any[]) => {
+    setPoseData(landmarks);
+  }, []);
+
+  const togglePoseOverlay = useCallback(() => {
+    setShowPoseOverlay(!showPoseOverlay);
+  }, [showPoseOverlay]);
+
   return (
     <div className="camera-container">
       <h2>Camera App</h2>
@@ -147,49 +162,58 @@ const Camera: React.FC<CameraProps> = ({ onNavigateToGame }) => {
         </div>
       )}
 
+      <div className="camera-controls">
+        
+        {isStreaming && (
+          <>
+            <button onClick={takePicture} className="btn btn-success">
+              Take Picture
+            </button>
+          </>
+        )}
+      </div>
+
+      <div className="camera-preview">
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className={`video-preview ${!isStreaming ? 'hidden' : ''}`}
+        />
+        <canvas ref={canvasRef} className="hidden" />
+        {showPoseOverlay && (
+          <canvas 
+            ref={overlayCanvasRef} 
+            className="pose-overlay"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              pointerEvents: 'none'
+            }}
+          />
+        )}
+      </div>
+
+      {/* Pose Detection Component */}
+      {/* TODO: move pose detection into Game.tsx */}
+      {/* <PoseDetector
+        videoRef={videoRef as React.RefObject<HTMLVideoElement>}
+        canvasRef={(showPoseOverlay ? overlayCanvasRef : canvasRef) as React.RefObject<HTMLCanvasElement>}
+        isStreaming={isStreaming}
+        onPoseDetected={handlePoseDetected}
+      /> */}
+
       {isLoading ? (
         <div className="loading-screen">
           <div className="loading-spinner"></div>
           <h3>{loadingMessage}</h3>
           <p>Please wait while we process your image...</p>
         </div>
-      ) : (
-        <>
-          <div className="camera-controls">
-            {isStreaming && (
-              <button onClick={takePicture} className="btn btn-success">
-                Take Picture
-              </button>
-            )}
-          </div>
-
-          <div className="camera-preview">
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className={`video-preview ${!isStreaming ? 'hidden' : ''}`}
-            />
-            <canvas ref={canvasRef} className="hidden" />
-          </div>
-
-          {capturedImage && !isStreaming && (
-            <div className="captured-image-section">
-              <h3>Captured Photo</h3>
-              <img src={capturedImage} alt="Captured" className="captured-image" />
-              <div className="image-controls">
-                <button onClick={downloadImage} className="btn btn-primary">
-                  Download
-                </button>
-                <button onClick={clearImage} className="btn btn-secondary">
-                  Clear
-                </button>
-              </div>
-            </div>
-          )}
-        </>
-      )}
+      ) : null}
     </div>
   );
 };
