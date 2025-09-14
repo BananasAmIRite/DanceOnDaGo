@@ -36,8 +36,22 @@ app.post("/upload-video-base64", async (req, res) => {
 
     const musicFile = await downloadMp3(musicUrl, {outputDir: "./downloads", filename: "music.mp3"});
 
-    res.json({ message: "Video uploaded successfully!", emotions: emotions, musicUrl: musicUrl });
+    res.json({ 
+        message: "Video uploaded successfully!", 
+        emotions: emotions, 
+        musicUrl: musicUrl,
+        correctLandmarks: [] // Empty array for now - will be populated with reference poses in the future
+    });
 })
+
+app.post("/get_score", async (req, res) => {
+    const { poseHistory, correctLandmarks, gameData } = req.body;
+    
+    res.json({
+        message: "Score calculated successfully!",
+        score: 0
+    });
+});
 
 const PORT = process.env.PORT || 3000;
 

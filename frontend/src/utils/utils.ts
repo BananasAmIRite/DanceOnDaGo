@@ -33,6 +33,43 @@ export const prunePose = (fullPose: PoseLandmark[]) => {
     ]; 
 }
 
+export const avgPoseLandmark = (fullPose: PoseLandmark[]) => {
+    const sum = fullPose.reduce((acc, pose) => {
+        return {
+            x: acc.x + pose.x,
+            y: acc.y + pose.y,
+            z: acc.z + pose.z,
+            visibility: acc.visibility + pose.visibility,
+        };
+    }, { x: 0, y: 0, z: 0, visibility: 0 });
+    
+    return {
+        x: sum.x / fullPose.length,
+        y: sum.y / fullPose.length,
+        z: sum.z / fullPose.length,
+        visibility: sum.visibility / fullPose.length,
+    };
+}
+
 export const normalizePose = (fullPose: PoseLandmark[]) => {
+    const avg = avgPoseLandmark(fullPose);
+
+    // const maxX = fullPose.reduce((b, pose) => Math.max(pose.x, b), 0);
+    // const minX = fullPose.reduce((b, pose) => Math.min(pose.x, b), 0);
+    // const maxY = fullPose.reduce((b, pose) => Math.max(pose.y, b), 0);
+    // const minY = fullPose.reduce((b, pose) => Math.min(pose.y, b), 0);
 // TODO: normalize pose
+// TODO: currently no normalization since the data is normalized from [0, 1]. If need be, can transfer to different domain. 
+    return fullPose.map(pose => {
+        return {
+            // x: (pose.x - avg.x)/(maxX - minX) + 0.5,
+            // y: (pose.y - avg.y)/(maxY - minY) + 0.5,
+            // z: pose.z / Math.abs(pose.z),
+            // visibility: 1,
+            x: pose.x,
+            y: pose.y,
+            z: pose.z,
+            visibility: pose.visibility,
+        };
+    }); 
 };

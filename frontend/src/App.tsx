@@ -7,6 +7,7 @@ interface GameData {
   capturedImage: string;
   emotions?: any;
   musicUrl?: string;
+  correctLandmarks?: any[][];
   processingComplete: boolean;
 }
 

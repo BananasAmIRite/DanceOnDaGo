@@ -201,7 +201,6 @@ const Camera: React.FC<CameraProps> = ({ onNavigateToGame }) => {
         <div className="loading-screen">
           <div className="loading-spinner"></div>
           <h3>{loadingMessage}</h3>
-          <p>Process your image...</p>
         </div>
       ) : null}
     </div>

@@ -1,30 +1,37 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import PoseDetector from './PoseDetector';
+import PoseDetector, { PoseLandmark } from './PoseDetector';
+import Scoring from './Scoring';
 import './Game.css';
 
 interface GameData {
   capturedImage: string;
   emotions?: any;
   musicUrl?: string;
+  correctLandmarks?: any[][];
   processingComplete: boolean;
 }
 
 interface GameProps {
   gameData: GameData;
   onBackToCamera: () => void;
+  onSongEnd?: () => void;
+  onPoseHistoryUpdate?: (history: PoseLandmark[][]) => void;
 }
 
-const Game: React.FC<GameProps> = ({ gameData, onBackToCamera }) => {
+const Game: React.FC<GameProps> = (props) => {
+  const { gameData, onBackToCamera } = props;
   const videoRef = useRef<HTMLVideoElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [poseData, setPoseData] = useState<any>(null);
+  const [poseData, setPoseData] = useState<PoseLandmark[] | null>(null);
+  const [poseHistory, setPoseHistory] = useState<PoseLandmark[][]>([]);
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [musicStarted, setMusicStarted] = useState(false);
   const [showStartButton, setShowStartButton] = useState(true);
+  const [showScoring, setShowScoring] = useState(false);
   
   // Configurable countdown duration (in seconds)
   const COUNTDOWN_DURATION = 3;
@@ -56,9 +63,27 @@ const Game: React.FC<GameProps> = ({ gameData, onBackToCamera }) => {
     }
   }, [stream]);
 
-  const handlePoseDetected = useCallback((landmarks: any[]) => {
+  const handlePoseDetected = useCallback((landmarks: PoseLandmark[]) => {
     setPoseData(landmarks);
-  }, []);
+    if (musicStarted) {
+      setPoseHistory(prev => {
+        const newHistory = [...prev, landmarks];
+        if (props.onPoseHistoryUpdate) {
+          props.onPoseHistoryUpdate(newHistory);
+        }
+        return newHistory;
+      });
+    }
+  }, [props, musicStarted]);
+
+  const handleSongEnd = useCallback(() => {
+    setMusicStarted(false);
+    if (props.onSongEnd) {
+      props.onSongEnd();
+    } else {
+      setShowScoring(true);
+    }
+  }, [props]);
 
   const startCountdown = useCallback(() => {
     setShowStartButton(false);
@@ -156,6 +181,7 @@ const Game: React.FC<GameProps> = ({ gameData, onBackToCamera }) => {
         <audio 
           ref={audioRef}
           preload="auto"
+          onEnded={handleSongEnd}
         >
           <source src={gameData.musicUrl} type="audio/mpeg" />
         </audio>
@@ -164,4 +190,36 @@ const Game: React.FC<GameProps> = ({ gameData, onBackToCamera }) => {
   );
 };
 
-export default Game;
+const GameWithScoring: React.FC<GameProps> = (props) => {
+  const [showScoring, setShowScoring] = useState(false);
+  const [poseHistory, setPoseHistory] = useState<PoseLandmark[][]>([]);
+  
+  // Use correct landmarks from gameData, default to empty array
+  const correctLandmarks = props.gameData.correctLandmarks || [];
+  // In a real implementation, this would contain the expected poses for each frame
+  
+  if (showScoring) {
+    return (
+      <Scoring 
+        poseHistory={poseHistory}
+        correctLandmarks={correctLandmarks}
+        gameData={props.gameData} 
+        onBackToCamera={() => {
+          setShowScoring(false);
+          setPoseHistory([]);
+          props.onBackToCamera();
+        }} 
+      />
+    );
+  }
+
+  return (
+    <Game 
+      {...props} 
+      onSongEnd={() => setShowScoring(true)}
+      onPoseHistoryUpdate={setPoseHistory}
+    />
+  );
+};
+
+export default GameWithScoring;
