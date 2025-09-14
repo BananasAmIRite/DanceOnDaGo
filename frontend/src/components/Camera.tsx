@@ -1,4 +1,5 @@
 import React, { useRef, useState, useCallback } from 'react';
+import axios from 'axios';
 import './Camera.css';
 
 interface CameraProps {}
@@ -38,7 +39,7 @@ const Camera: React.FC<CameraProps> = () => {
     }
   }, [stream]);
 
-  const takePicture = useCallback(() => {
+  const takePicture = useCallback(async () => {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
@@ -50,7 +51,20 @@ const Camera: React.FC<CameraProps> = () => {
         context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
         
         const imageDataUrl = canvas.toDataURL('image/png');
+        console.log(imageDataUrl); 
         setCapturedImage(imageDataUrl);
+
+        // Send image to server
+        try {
+          const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3000';
+          const response = await axios.post(`${backendUrl}/upload-video-base64`, {
+            imageData: imageDataUrl
+          });
+          console.log('Image sent to server:', response.data);
+        } catch (error) {
+          console.error('Error sending image to server:', error);
+          setError('Failed to send image to server');
+        }
       }
     }
   }, []);
