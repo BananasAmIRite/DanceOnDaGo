@@ -24,7 +24,7 @@ const Game: React.FC<GameProps> = ({ gameData, onBackToCamera }) => {
           <h2>Your Captured Image</h2>
           {gameData.capturedImage && (
             <img 
-              src={gameData.capturedImage} 
+              src={gameData.capturedImage}
               alt="Captured" 
               className="game-image" 
             />

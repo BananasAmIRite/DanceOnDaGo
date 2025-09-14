@@ -163,23 +163,11 @@ const Camera: React.FC<CameraProps> = ({ onNavigateToGame }) => {
       )}
 
       <div className="camera-controls">
-        {!isStreaming ? (
-          <button onClick={startCamera} className="btn btn-primary">
-            Start Camera
-          </button>
-        ) : (
-          <button onClick={stopCamera} className="btn btn-secondary">
-            Stop Camera
-          </button>
-        )}
         
         {isStreaming && (
           <>
             <button onClick={takePicture} className="btn btn-success">
               Take Picture
-            </button>
-            <button onClick={togglePoseOverlay} className="btn btn-info">
-              {showPoseOverlay ? 'Hide Pose' : 'Show Pose'}
             </button>
           </>
         )}
@@ -211,76 +199,21 @@ const Camera: React.FC<CameraProps> = ({ onNavigateToGame }) => {
       </div>
 
       {/* Pose Detection Component */}
-      <PoseDetector
+      {/* TODO: move pose detection into Game.tsx */}
+      {/* <PoseDetector
         videoRef={videoRef as React.RefObject<HTMLVideoElement>}
         canvasRef={(showPoseOverlay ? overlayCanvasRef : canvasRef) as React.RefObject<HTMLCanvasElement>}
         isStreaming={isStreaming}
         onPoseDetected={handlePoseDetected}
-      />
+      /> */}
 
-      {/* Pose Data Display */}
-      {poseData && (
-        <div className="pose-data">
-          <h3>Pose Detected</h3>
-          <p>Tracking {poseData.length} landmarks</p>
-        </div>
-      )}
-
-      {capturedImage && (
-        <div className="captured-image-section">
-          <h3>Captured Photo</h3>
-          <img src={capturedImage} alt="Captured" className="captured-image" />
-          <div className="image-controls">
-            <button onClick={downloadImage} className="btn btn-primary">
-              Download
-            </button>
-            <button onClick={clearImage} className="btn btn-secondary">
-              Clear
-            </button>
-          </div>
       {isLoading ? (
         <div className="loading-screen">
           <div className="loading-spinner"></div>
           <h3>{loadingMessage}</h3>
           <p>Please wait while we process your image...</p>
         </div>
-      ) : (
-        <>
-          <div className="camera-controls">
-            {isStreaming && (
-              <button onClick={takePicture} className="btn btn-success">
-                Take Picture
-              </button>
-            )}
-          </div>
-
-          <div className="camera-preview">
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className={`video-preview ${!isStreaming ? 'hidden' : ''}`}
-            />
-            <canvas ref={canvasRef} className="hidden" />
-          </div>
-
-          {capturedImage && !isStreaming && (
-            <div className="captured-image-section">
-              <h3>Captured Photo</h3>
-              <img src={capturedImage} alt="Captured" className="captured-image" />
-              <div className="image-controls">
-                <button onClick={downloadImage} className="btn btn-primary">
-                  Download
-                </button>
-                <button onClick={clearImage} className="btn btn-secondary">
-                  Clear
-                </button>
-              </div>
-            </div>
-          )}
-        </>
-      )}
+      ) : null}
     </div>
   );
 };
