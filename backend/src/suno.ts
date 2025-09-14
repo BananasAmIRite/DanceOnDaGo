@@ -47,8 +47,6 @@ export const generatePrompt = (emotionAnalysis: EmotionAnalysis) => {
         key = 'neutral key';
     }
 
-    tempo = 'fast tempo';
-
     const prompt = `Create a song in 4/4 time signature with zero phase offset that captures the essence of a scene evoking ${dominantEmotions} emotions. 
   The song should be 30 seconds long.
   The song should be in ${key} with a tempo of ${tempo}. 

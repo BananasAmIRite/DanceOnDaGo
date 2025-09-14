@@ -9,6 +9,7 @@ interface PoseDetectorProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
   isStreaming: boolean;
   onPoseDetected?: (landmarks: any[]) => void;
+  referencePose?: React.RefObject<PoseLandmark[] | null>;
 }
 
 export interface PoseLandmark {
@@ -22,7 +23,8 @@ const PoseDetector: React.FC<PoseDetectorProps> = ({
   videoRef,
   canvasRef,
   isStreaming,
-  onPoseDetected
+  onPoseDetected,
+  referencePose
 }) => {
   const poseRef = useRef<Pose | null>(null);
   const cameraRef = useRef<Camera | null>(null);
@@ -53,6 +55,8 @@ const PoseDetector: React.FC<PoseDetectorProps> = ({
         x: 1 - landmark.x // Flip x-coordinate (MediaPipe uses normalized coordinates 0-1)
       }));
 
+      // console.log(results.poseLandmarks);
+
       // Draw pose connections with flipped coordinates
       drawConnectors(ctx, flippedLandmarks, POSE_CONNECTIONS_PRUNED, {
         color: '#00FF00',
@@ -74,7 +78,35 @@ const PoseDetector: React.FC<PoseDetectorProps> = ({
         onPoseDetected(flippedLandmarks);
       }
     }
-  }, [canvasRef, videoRef, onPoseDetected]);
+
+    const currentReferencePose = referencePose?.current;
+    console.log(currentReferencePose);
+
+    // Draw reference pose in blue if available
+    if (currentReferencePose && currentReferencePose.length > 0) {
+      console.log("Drawing reference pose", currentReferencePose);
+
+      // Reference pose coordinates are already normalized (0-1) like MediaPipe format
+      // We need to flip them horizontally to match the flipped video, just like we do for detected poses
+      const flippedReferencePose = currentReferencePose.map(landmark => ({
+        ...landmark,
+        x: 1 - landmark.x // Flip x-coordinate to match flipped video
+      }));
+
+      // Draw reference pose connections in blue
+      drawConnectors(ctx, flippedReferencePose, POSE_CONNECTIONS_PRUNED, {
+        color: '#0000FF',
+        lineWidth: 3
+      });
+
+      // Draw reference pose landmarks in blue
+      drawLandmarks(ctx, flippedReferencePose, {
+        color: '#0000FF',
+        lineWidth: 2,
+        radius: 5
+      });
+    }
+  }, [canvasRef, videoRef, onPoseDetected, referencePose]);
 
   const initializePose = useCallback(async () => {
     if (!videoRef.current || isInitialized) return;

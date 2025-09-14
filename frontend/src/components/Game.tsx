@@ -3,7 +3,7 @@ import PoseDetector, { PoseLandmark } from './PoseDetector';
 import Scoring from './Scoring';
 import './Game.css';
 
-interface GameData {
+export interface GameData {
   capturedImage: string;
   emotions?: any;
   musicUrl?: string;
@@ -11,11 +11,16 @@ interface GameData {
   processingComplete: boolean;
 }
 
+interface PoseHistoryEntry {
+  landmarks: PoseLandmark[];
+  timestamp: number; // Time in milliseconds since music started
+}
+
 interface GameProps {
   gameData: GameData;
   onBackToCamera: () => void;
   onSongEnd?: () => void;
-  onPoseHistoryUpdate?: (history: PoseLandmark[][]) => void;
+  onPoseHistoryUpdate?: (history: PoseHistoryEntry[]) => void;
 }
 
 const Game: React.FC<GameProps> = (props) => {
@@ -26,12 +31,20 @@ const Game: React.FC<GameProps> = (props) => {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [poseData, setPoseData] = useState<PoseLandmark[] | null>(null);
-  const [poseHistory, setPoseHistory] = useState<PoseLandmark[][]>([]);
+  const currentReferencePoseRef = useRef<PoseLandmark[] | null>(null);
+  const [poseHistory, setPoseHistory] = useState<PoseHistoryEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const musicStartTimeRef = useRef<number | null>(null);
+  const musicStartedRef = useRef<boolean>(false);
   const [countdown, setCountdown] = useState<number | null>(null);
-  const [musicStarted, setMusicStarted] = useState(false);
   const [showStartButton, setShowStartButton] = useState(true);
   const [showScoring, setShowScoring] = useState(false);
+
+  // Note: This useEffect won't trigger when ref changes since refs don't cause re-renders
+  // Keeping for initial logging only
+  // useEffect(() => {
+  //   console.log("Game component mounted, initial referencePose:", currentReferencePoseRef.current);
+  // }, []); 
   
   // Configurable countdown duration (in seconds)
   const COUNTDOWN_DURATION = 3;
@@ -63,21 +76,35 @@ const Game: React.FC<GameProps> = (props) => {
     }
   }, [stream]);
 
+
   const handlePoseDetected = useCallback((landmarks: PoseLandmark[]) => {
     setPoseData(landmarks);
-    if (musicStarted) {
+    if (musicStartedRef.current && musicStartTimeRef.current !== null) {
+      const currentTime = Date.now();
+      const timestamp = currentTime - musicStartTimeRef.current;
+      
+      // Calculate which reference pose frame to show based on timestamp
+      const frameIndex = Math.round(60 / 1000 * timestamp); // 60 FPS reference data
+      if (gameData.correctLandmarks && frameIndex < gameData.correctLandmarks.length) {
+        currentReferencePoseRef.current = gameData.correctLandmarks[frameIndex];
+      }
+      
       setPoseHistory(prev => {
-        const newHistory = [...prev, landmarks];
+        const newEntry: PoseHistoryEntry = {
+          landmarks,
+          timestamp
+        };
+        const newHistory = [...prev, newEntry];
         if (props.onPoseHistoryUpdate) {
           props.onPoseHistoryUpdate(newHistory);
         }
         return newHistory;
       });
     }
-  }, [props, musicStarted]);
+  }, [props, gameData.correctLandmarks]);
 
   const handleSongEnd = useCallback(() => {
-    setMusicStarted(false);
+    musicStartedRef.current = false;
     if (props.onSongEnd) {
       props.onSongEnd();
     } else {
@@ -93,7 +120,8 @@ const Game: React.FC<GameProps> = (props) => {
       setCountdown((prev) => {
         if (prev === null || prev <= 1) {
           clearInterval(countdownInterval);
-          setMusicStarted(true);
+          musicStartedRef.current = true;
+          musicStartTimeRef.current = Date.now(); // Record when music starts
           // Start music after countdown
           if (audioRef.current && gameData.musicUrl) {
             audioRef.current.play().catch(console.error);
@@ -150,6 +178,7 @@ const Game: React.FC<GameProps> = (props) => {
         canvasRef={overlayCanvasRef as React.RefObject<HTMLCanvasElement>}
         isStreaming={isStreaming}
         onPoseDetected={handlePoseDetected}
+        referencePose={currentReferencePoseRef}
       />
 
       {/* Start button overlay */}
@@ -186,13 +215,14 @@ const Game: React.FC<GameProps> = (props) => {
           <source src={gameData.musicUrl} type="audio/mpeg" />
         </audio>
       )}
+      <button onClick={handleSongEnd} style={{position: "absolute", top: "10px", right: "10px", zIndex: 1000}}>skip</button>
     </div>
   );
 };
 
 const GameWithScoring: React.FC<GameProps> = (props) => {
   const [showScoring, setShowScoring] = useState(false);
-  const [poseHistory, setPoseHistory] = useState<PoseLandmark[][]>([]);
+  const [poseHistory, setPoseHistory] = useState<PoseHistoryEntry[]>([]);
   
   // Use correct landmarks from gameData, default to empty array
   const correctLandmarks = props.gameData.correctLandmarks || [];

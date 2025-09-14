@@ -1,14 +1,7 @@
-import PoseDetector from './PoseDetector';
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import axios from 'axios';
 import './Camera.css';
-
-interface GameData {
-  capturedImage: string;
-  emotions?: any;
-  musicUrl?: string;
-  processingComplete: boolean;
-}
+import { GameData } from './Game';
 
 interface CameraProps {
   onNavigateToGame: (data: GameData) => void;
@@ -106,7 +99,8 @@ const Camera: React.FC<CameraProps> = ({ onNavigateToGame }) => {
             capturedImage: imageDataUrl,
             emotions: response.data.emotions,
             musicUrl: response.data.musicUrl,
-            processingComplete: true
+            processingComplete: true, 
+            correctLandmarks: response.data.correctLandmarks
           };
           
           // Show completion message briefly before navigating

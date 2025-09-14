@@ -2,8 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { PoseLandmark } from './PoseDetector';
 import './Scoring.css';
 
+interface PoseHistoryEntry {
+  landmarks: PoseLandmark[];
+  timestamp: number; // Time in milliseconds since music started
+}
+
 interface ScoringProps {
-  poseHistory: PoseLandmark[][];
+  poseHistory: PoseHistoryEntry[];
   correctLandmarks: PoseLandmark[][];
   gameData: any;
   onBackToCamera: () => void;
@@ -125,7 +130,7 @@ const Scoring: React.FC<ScoringProps> = ({ poseHistory, correctLandmarks, gameDa
         <div className="score-main">
           <div className="score-circle" style={{ borderColor: getScoreColor(scoreData.score) }}>
             <div className="score-number" style={{ color: getScoreColor(scoreData.score) }}>
-              {scoreData.score}
+              {Math.round(scoreData.score)}
             </div>
             <div className="score-grade" style={{ color: getScoreColor(scoreData.score) }}>
               {getScoreGrade(scoreData.score)}
