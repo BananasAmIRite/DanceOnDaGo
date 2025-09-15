@@ -63,7 +63,7 @@ hackmit-best/
 1. **Clone the repository**:
    ```bash
    git clone <repository-url>
-   cd hackmit-best
+   cd DanceOnDaGo
    ```
 
 2. **Backend Setup**:
